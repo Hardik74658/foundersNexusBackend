@@ -1,0 +1,77 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+ENV/
+
+# Dependency management
+Pipfile
+Pipfile.lock
+poetry.lock
+pdm.lock
+
+# Build / distribution directories
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+
+# Database and local settings
+db.sqlite3
+db.sqlite3-journal
+instance/
+config.py
+settings.py
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Pyright and MyPy type checking
+.pyre/
+.pytype/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# FastAPI static/media files (if applicable)
+static/
+media/
+
+# Docker
+.dockerignore
+Dockerfile
+
+# VS Code settings
+.vscode/
+
+# PyCharm settings
+.idea/
+
+# Miscellaneous
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
