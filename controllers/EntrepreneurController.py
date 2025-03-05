@@ -18,6 +18,30 @@ async def getAllEntrepreneurs():
 
     return [EntrepreneurOut(**entrepreneur) for entrepreneur in entrepreneurs]
 
+
+# pipeline = [
+#     {
+#         "$lookup": {
+#             "from": "users",                  # Collection to join with
+#             "localField": "userId",           # Field from the entrepreneurs collection
+#             "foreignField": "_id",            # Field from the users collection
+#             "as": "user"                      # Output array field
+#         }
+#     },
+#     {
+#         "$unwind": "$user"                    # Unwind the user array (assumes each entrepreneur has one user)
+#     },
+#     {
+#         "$addFields": {                      # Convert ObjectId fields to strings if needed
+#             "userId": {"$toString": "$userId"},
+#             "user._id": {"$toString": "$user._id"}
+#         }
+#     }
+# ]
+
+# result = await entrepreneurs_collection.aggregate(pipeline).to_list(length=None)
+# return [EntrepreneurOut(**entrepreneur) for entrepreneur in result]
+
 async def addEntrepreneur(entrepreneur:Entrepreneur):
     entrepreneur.userId = ObjectId(entrepreneur["userId"])
     entrepreneur_id = await entrepreneurs_collection.insert_one(entrepreneur).inserted_id
