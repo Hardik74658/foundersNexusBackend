@@ -32,6 +32,7 @@ async def getInvestorById(investorId: str):
 
 
 async def addInvestor(investor: Investor):
+    investor.userId = ObjectId(investor.userId)
     createInvestor = await investors_collection.insert_one(investor.dict(exclude_unset=True))
     investorId = str(createInvestor.inserted_id)
     return JSONResponse({
