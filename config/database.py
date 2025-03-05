@@ -11,3 +11,4 @@ database = client[DATABASE_NAME]
 
 roles_collection = database["roles"]
 users_collection = database["users"]
+entrepreneurs_collection = database["entrepreneurs"]
