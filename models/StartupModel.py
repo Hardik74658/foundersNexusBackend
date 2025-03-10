@@ -4,6 +4,29 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from bson import ObjectId
 
+# Startup Model
+# Field	Data Type	Description
+# id	UUID	Unique identifier for the startup
+# startup_name	String	Name of the startup
+# description	Text	Detailed overview of what the startup does (explains what the startup actually does)
+# industry	String	Market sector of the startup
+# website	String	Startup's website URL
+# logo_url	Optional[String]	URL to the startup's logo
+# founders	List of UUIDs	List of entrepreneur user IDs (founders)
+# market_size	String	Approximate potential market size
+# revenue_model	Optional[String]	Revenue generation model (optional; updated when pitch is added)
+# contact_details	Optional[String]	Contact details for further inquiries (optional; used to redirect to founders’ chat)
+# previous_fundings	Optional[List of Dict]	List of past funding rounds; each record includes:
+# - startup_name, stage, amount, date
+# - investors: List of investor IDs (internal) or names (external)
+# equity_split	Optional[List of Dict]	Equity distribution; each record includes:
+# - For founders: founder_id, name, equity_percentage
+# - For investors: investor_id, name, equity_percentage
+# - For ESOP: name, equity_percentage
+# created_at	DateTime	Timestamp of startup creation
+# updated_at	DateTime	Timestamp for last update
+
+
 # IST timezone and helper function
 IST = ZoneInfo("Asia/Kolkata")
 def current_time_ist():
@@ -26,6 +49,7 @@ class Startup(BaseModel):
     description: str                    # Describes what the startup actually does
     industry: str
     website: Optional[str] = None
+    logo_url: Optional[str] = None     # URL to the startup's logo
     founders: List[str]                 # List of entrepreneur IDs (as strings or ObjectIds)
     market_size: str                    # Approximate market size
     revenue_model: Optional[str] = None # Revenue generation model (optional)
