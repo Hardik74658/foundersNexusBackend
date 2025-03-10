@@ -15,6 +15,7 @@
 | followers         | List of UUIDs     | List of user IDs who follow this user                         |
 | following         | List of UUIDs     | List of user IDs that this user follows                        |
 | posts             | List of UUIDs     | List of post IDs created by the user                          |
+| current_startup   | Optional[UUID]    | ID of the startup the user is currently active in (if applicable)|
 | is_verified       | Boolean           | Indicates if the account is verified                          |
 | is_active         | Boolean           | Indicates if the account is active                            |
 | created_at        | DateTime          | Timestamp of account creation                                 |
@@ -23,34 +24,34 @@
 ---
 
 ### **Entrepreneur Model**
-| Field                 | Data Type         | Description                                                                |
-|-----------------------|-------------------|----------------------------------------------------------------------------|
-| id                    | UUID              | Unique identifier for the entrepreneur profile                             |
-| user_id               | UUID              | Reference to the associated User record                                    |
-| education_background  | List of Dict      | List of degrees, institutions, years, and fields of study                  |
-| skills                | List of Strings   | List of entrepreneur's skills                                              |
-| area_of_interest      | List of Strings   | Industries or domains of interest                                          |
-| work_experience       | List of Dict      | Previous work experience details (company_name, role, duration, description) |
-| previous_startups     | List of Dict      | List of previous startups and roles (startup_id, startup_name, role, duration)|
-| certifications        | List of Strings   | Professional certifications (optional)                                   |
-| portfolio_links       | List of Strings   | URLs to portfolios (e.g., LinkedIn, GitHub)                                  |
-| created_at            | DateTime          | Timestamp of profile creation                                              |
-| updated_at            | DateTime          | Timestamp for last update                                                  |
+| Field                | Data Type         | Description                                                                |
+|----------------------|-------------------|----------------------------------------------------------------------------|
+| id                   | UUID              | Unique identifier for the entrepreneur profile                             |
+| user_id              | UUID              | Reference to the associated User record                                    |
+| education_background | List of Dict      | List of degrees, institutions, years, and fields of study                  |
+| skills               | List of Strings   | List of entrepreneur's skills                                              |
+| area_of_interest     | List of Strings   | Industries or domains of interest                                          |
+| work_experience      | List of Dict      | Previous work experience details (company_name, role, duration, description) |
+| previous_startups    | List of Dict      | List of previous startups and roles (startup_id, startup_name, role, duration)|
+| certifications       | List of Strings   | Professional certifications (optional)                                   |
+| portfolio_links      | List of Strings   | URLs to portfolios (e.g., LinkedIn, GitHub)                                  |
+| created_at           | DateTime          | Timestamp of profile creation                                              |
+| updated_at           | DateTime          | Timestamp for last update                                                  |
 
 ---
 
 ### **Investor Model**
-| Field                   | Data Type         | Description                                               |
-|-------------------------|-------------------|-----------------------------------------------------------|
-| id                      | UUID              | Unique identifier for the investor profile                |
-| user_id                 | UUID              | Reference to the associated User record                   |
-| investor_type           | Enum              | Type of investor: Angel, VC, Corporate, Government         |
-| funds_available         | Float             | Investment capital available                              |
-| investment_interests    | List of Strings   | Industries or sectors of interest                         |
-| previous_investments    | List of Dict      | List of past investments (startup_id, startup_name, amount, date) |
-| preferred_funding_stage | Enum              | Preferred investment stage (e.g., Seed, Series A)            |
-| created_at              | DateTime          | Timestamp of profile creation                             |
-| updated_at              | DateTime          | Timestamp for last update                                 |
+| Field                   | Data Type         | Description                                                        |
+|-------------------------|-------------------|--------------------------------------------------------------------|
+| id                      | UUID              | Unique identifier for the investor profile                         |
+| user_id                 | UUID              | Reference to the associated User record                            |
+| investor_type           | Enum              | Type of investor: Angel, VC, Corporate, Government                   |
+| funds_available         | Float             | Investment capital available                                       |
+| investment_interests    | List of Strings   | Industries or sectors of interest                                  |
+| previous_investments    | List of Dict      | List of past investments (startup_id, startup_name, amount, date)      |
+| preferred_funding_stage | Enum              | Preferred investment stage (e.g., Seed, Series A)                    |
+| created_at              | DateTime          | Timestamp of profile creation                                      |
+| updated_at              | DateTime          | Timestamp for last update                                          |
 
 ---
 
