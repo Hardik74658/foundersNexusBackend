@@ -8,6 +8,25 @@ from zoneinfo import ZoneInfo
 def current_time_ist():
     return datetime.now(ZoneInfo("Asia/Kolkata"))
 
+# User Model
+# Field	Data Type	Description
+# id	UUID	Unique identifier for each user
+# full_name	String	User's complete name
+# email	String	Unique email address
+# password	String	Bcrypt-encrypted password
+# profile_picture	String	URL to the user's profile image
+# bio	String	Brief biography
+# location	String	User's location
+# role	Enum	Role of the user: Entrepreneur or Investor
+# followers	List of UUIDs	List of user IDs who follow this user
+# following	List of UUIDs	List of user IDs that this user follows
+# posts	List of UUIDs	List of post IDs created by the user
+# current_startup	Optional[UUID]	ID of the startup the user is currently active in (if applicable)
+# is_verified	Boolean	Indicates if the account is verified
+# is_active	Boolean	Indicates if the account is active
+# created_at	DateTime	Timestamp of account creation
+# updated_at	DateTime	Timestamp for last update
+
 class User(BaseModel):
     fullName:str
     email:str
@@ -17,6 +36,10 @@ class User(BaseModel):
     bio:str
     location:str
     roleId:str
+    followers:Optional[list] = []
+    following:Optional[list] = []
+    posts:Optional[list] = []
+    currentStartup:Optional[str] = None
     isVerified:Optional[bool] = False
     isActive:Optional[bool] = True
     created_at: datetime = Field(default_factory=current_time_ist)
