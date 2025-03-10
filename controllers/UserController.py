@@ -4,6 +4,7 @@ from bson import ObjectId
 import bcrypt
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
+from utils.SendMail import send_mail
 
 
 async def getAllUsers():
@@ -23,6 +24,7 @@ async def getAllUsers():
 async def addUser(user:User):
     user.roleId = ObjectId(user.roleId)
     result = await users_collection.insert_one(user.dict())
+    send_mail(user.email,"Welcome to our platform","You have been successfully registered to our platform")   
     return JSONResponse(
         content={"message": "user created successfully", "user": str(result.inserted_id)},
         status_code=201

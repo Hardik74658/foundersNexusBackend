@@ -1,7 +1,12 @@
 from pydantic import BaseModel,Field,validator
+from datetime import datetime
 from bson import ObjectId
 from typing import Optional, Dict, Any
 import bcrypt   #pip install bcrypt
+from zoneinfo import ZoneInfo 
+
+def current_time_ist():
+    return datetime.now(ZoneInfo("Asia/Kolkata"))
 
 class User(BaseModel):
     fullName:str
@@ -14,6 +19,8 @@ class User(BaseModel):
     roleId:str
     isVerified:Optional[bool] = False
     isActive:Optional[bool] = True
+    created_at: datetime = Field(default_factory=current_time_ist)
+    updated_at: datetime = Field(default_factory=current_time_ist)
 
 
     @validator("password",pre=True,always=True)
