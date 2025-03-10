@@ -21,3 +21,11 @@ async def addStartup(startup):
         "message": "Startup created successfully",
         "startupId": str(startupId)
     },status_code=201)
+
+async def deleteStartup(startupId: str):
+    deleteStartup = await startups_collection.delete_one({"_id": ObjectId(startupId)})  
+    if deleteStartup.deleted_count == 1:
+        return JSONResponse({
+            "message": "Startup deleted successfully"
+        })
+    raise HTTPException(status_code=404, detail="Startup not found")
