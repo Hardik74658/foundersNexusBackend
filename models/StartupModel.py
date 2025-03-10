@@ -9,20 +9,26 @@ IST = ZoneInfo("Asia/Kolkata")
 def current_time_ist():
     return datetime.now(IST)
 
-# Helper function to convert ObjectId to string
+# Helper functions for conversion
 def convert_objectid_to_str(value):
     if isinstance(value, ObjectId):
         return str(value)
     return value
 
-# Startup model (as stored in MongoDB)
+def convert_str_to_objectid(value):
+    if isinstance(value, str):
+        return ObjectId(value)
+    return value
+
+# Updated Startup model with integrated pitch details
 class Startup(BaseModel):
     startup_name: str
-    description: str
+    description: str                    # Describes what the startup actually does
     industry: str
     website: Optional[str] = None
-    founders: List[str]  
-    market_size: str
+    founders: List[str]                 # List of entrepreneur IDs (as strings or ObjectIds)
+    market_size: str                    # Approximate market size
+    revenue_model: Optional[str] = None # Revenue generation model (optional)
     previous_fundings: Optional[List[Dict[str, Any]]] = Field(
         default=None,
         example=[
@@ -73,9 +79,34 @@ class Startup(BaseModel):
     created_at: datetime = Field(default_factory=current_time_ist)
     updated_at: datetime = Field(default_factory=current_time_ist)
 
-# StartupOut model for API responses with conversions
+
+    @validator("founders", pre=True, each_item=True)
+    def convert_founders(cls, v):
+        return convert_str_to_objectid(v)
+
+    @validator("previous_fundings", pre=True)
+    def convert_previous_fundings(cls, v):
+        if not v:
+            return v
+        for record in v:
+            if "investors" in record:
+                record["investors"] = [convert_str_to_objectid(inv) for inv in record["investors"]]
+        return v
+
+    @validator("equity_split", pre=True)
+    def convert_equity_split(cls, v):
+        if not v:
+            return v
+        for record in v:
+            if record.get("type") == "Founder" and "founder_id" in record:
+                record["founder_id"] = convert_str_to_objectid(record["founder_id"])
+            elif record.get("type") == "Investor" and "investor_id" in record:
+                record["investor_id"] = convert_str_to_objectid(record["investor_id"])
+        return v
+
+# StartupOut model for API responses with conversion of ObjectIds to strings
 class StartupOut(Startup):
-    id: str = Field(alias="_id")  # Startup document ID from MongoDB
+    id: str = Field(alias="_id")  # MongoDB document ID
 
     @validator("id", pre=True, always=True)
     def convert_id(cls, v):
@@ -90,7 +121,6 @@ class StartupOut(Startup):
         if not v:
             return v
         for record in v:
-            # No funding_id is expected now
             if "investors" in record:
                 record["investors"] = [convert_objectid_to_str(inv) for inv in record["investors"]]
         return v
@@ -100,7 +130,6 @@ class StartupOut(Startup):
         if not v:
             return v
         for record in v:
-            # For founders, convert founder_id; for investors, convert investor_id if present
             if record.get("type") == "Founder" and "founder_id" in record:
                 record["founder_id"] = convert_objectid_to_str(record["founder_id"])
             elif record.get("type") == "Investor" and "investor_id" in record:
