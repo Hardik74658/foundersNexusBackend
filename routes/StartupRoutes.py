@@ -16,3 +16,8 @@ async def add_startup(startup: Startup):
 @router.get("/startups/{startupId}")
 async def get_startup_by_id(startupId: str):
     return await StartupController.getStartupById(startupId)
+
+
+@router.delete("/startups/{startupId}")
+async def delete_startup_by_id(startupId: str):
+    return await StartupController.deleteStartup(startupId)
