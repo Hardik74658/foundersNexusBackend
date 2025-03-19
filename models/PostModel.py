@@ -28,7 +28,7 @@ def convert_str_to_objectid(value):
     return value
 
 class Post(BaseModel):
-    user_id: str
+    userId: str
     content: str
     image_url: Optional[str] = None
     likes: List[str] = []
@@ -36,17 +36,6 @@ class Post(BaseModel):
     created_at: datetime = Field(default_factory=current_time_ist)
     updated_at: datetime = Field(default_factory=current_time_ist)
 
-    @validator("user_id", pre=True, always=True)
-    def convert_user_id(cls, v):
-        return convert_str_to_objectid(v)
-    
-    @validator("likes", pre=True, always=True)
-    def convert_likes(cls, v):
-        return [convert_str_to_objectid(like) for like in v]
-    
-    @validator("comments", pre=True, always=True)
-    def convert_comments(cls, v):
-        return [convert_str_to_objectid(comment) for comment in v]
     
     
 
@@ -57,7 +46,7 @@ class PostOut(Post):
     def convert_id(cls, v):
         return convert_objectid_to_str(v)
     
-    @validator("user_id", pre=True, always=True)
+    @validator("userId", pre=True, always=True)
     def convert_user_id(cls, v):
         return convert_objectid_to_str(v)
     
