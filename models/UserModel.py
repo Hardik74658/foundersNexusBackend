@@ -60,11 +60,18 @@ class UserOut(User):
     # Optional fields that you may not want to return in your API response.
     email: Optional[str] = None
     password: Optional[str] = None
+    currentStartup: Optional[Dict[str,Any]] = None
 
     @validator("id",pre=True,always=True)
     def convert_id(cls,v):
         if isinstance(v,ObjectId):
             return str(v)
+        return v
+    
+    @validator("currentStartup",pre=True,always=True)
+    def convert_current_startup_id(cls,v):
+        if isinstance(v,Dict) and "_id" in v:
+            v["_id"] = str(v["_id"])
         return v
     
     @validator("role", pre=True, always=True)

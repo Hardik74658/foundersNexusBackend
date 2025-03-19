@@ -1,24 +1,38 @@
 from models.UserModel import User,UserOut,UserLogin
-from config.database import users_collection,roles_collection
+from config.database import users_collection,roles_collection,startups_collection
 from bson import ObjectId
 import bcrypt
-from fastapi import HTTPException
+from fastapi import HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from utils.SendMail import send_mail
 
+
+def convert_objectid_to_str(data):
+    """Recursively converts ObjectId instances in the data to strings."""
+    if isinstance(data, ObjectId):
+        return str(data)
+    elif isinstance(data, dict):
+        return {k: convert_objectid_to_str(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [convert_objectid_to_str(item) for item in data]
+    return data
 
 async def getAllUsers():
     users = await users_collection.find().to_list()
 
     for user in users:
-        
         if "roleId" in user and isinstance(user["roleId"],ObjectId):
             role = await roles_collection.find_one({"_id": user["roleId"]})
+            # print(role)
             user["roleId"] = str(user["roleId"])
         if role:
             role["_id"]=str(role["_id"])
             user["role"]=role        
+        if "currentStartup" in user and isinstance(user["currentStartup"],ObjectId):
+            startup = await startups_collection.find_one({"_id": user["currentStartup"]})
+            user["currentStartup"] = startup
 
+    users = convert_objectid_to_str(users)
     return [UserOut(**user) for user in users]
 
 async def addUser(user:User):
@@ -33,12 +47,10 @@ async def addUser(user:User):
 
 async def deleteUser(userId:str):
     foundUser = await users_collection.delete_one({"_id":ObjectId(userId)})
-    if foundUser is None:
-        raise HTTPException(status_code=404,detail="User not found")
-    return JSONResponse(
-        content={"message": "user deleted successfully", "deletedUserCount": str(foundUser.deleted_count)},
-        status_code=204
-    )
+    if foundUser.deleted_count == 1:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    raise HTTPException(status_code=404,detail="User not found")
+    
 
 async def getUserById(userId:str):
     foundUser = await users_collection.find_one({"_id":ObjectId(userId)})
