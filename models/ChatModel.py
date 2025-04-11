@@ -16,7 +16,6 @@ def current_time_ist():
 # timestamp	DateTime	Timestamp when the message was sent
 # is_read	Boolean	Indicates if the message has been read
 
-
 def convert_objectid_to_str(value):
     if isinstance(value, ObjectId):
         return str(value)
@@ -32,13 +31,6 @@ class Chat(BaseModel):
     timestamp: Optional[datetime] = Field(default_factory=current_time_ist)
     is_read: Optional[bool] = False
     
-     
-    # @validator("role_id",pre=True,always=True)
-    # def convert_objectId(cls,v):
-    #     if isinstance(v,ObjectId):
-    #         return str(v)
-    #     return v
-
     @validator("sender_id",pre=True,always=True)
     def convert_sender_id(cls,v):
         return convert_str_to_objectid(v)
