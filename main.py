@@ -8,7 +8,6 @@ from routes.StartupRoutes import router as StartupRouter
 from routes.PostRoutes import router as PostRouter
 from routes.CommentRoutes import router as CommentRouter
 
-
 app = FastAPI()
 
 app.include_router(RoleRouter)
