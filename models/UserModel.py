@@ -46,11 +46,11 @@ class User(BaseModel):
     updated_at: datetime = Field(default_factory=current_time_ist)
 
 
-    @validator("password",pre=True,always=True)
-    def encrypt_password(cls,v):
-        if v is None:
-            return None
-        return bcrypt.hashpw(v.encode("utf-8"),bcrypt.gensalt())
+    @validator("password", pre=True, always=True)
+    def encrypt_password(cls, v):
+        if isinstance(v, str):
+            return bcrypt.hashpw(v.encode("utf-8"), bcrypt.gensalt())
+        raise ValueError("Password must be a string")
         
 
 class UserOut(User):
@@ -60,7 +60,7 @@ class UserOut(User):
     # Optional fields that you may not want to return in your API response.
     email: Optional[str] = None
     password: Optional[str] = None
-    currentStartup: Optional[Dict[str,Any]] = None
+    currentStartupData: Optional[Dict[str,Any]] = None
 
     @validator("id",pre=True,always=True)
     def convert_id(cls,v):
@@ -68,7 +68,7 @@ class UserOut(User):
             return str(v)
         return v
     
-    @validator("currentStartup",pre=True,always=True)
+    @validator("currentStartupData",pre=True,always=True)
     def convert_current_startup_id(cls,v):
         if isinstance(v,Dict) and "_id" in v:
             v["_id"] = str(v["_id"])
@@ -89,3 +89,9 @@ class UserOut(User):
 class UserLogin(BaseModel):
     email:str
     password:str
+
+
+
+class ResetPasswordReq(BaseModel):
+    token: str
+    password: str

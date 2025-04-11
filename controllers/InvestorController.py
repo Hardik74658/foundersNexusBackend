@@ -55,8 +55,8 @@ async def addInvestor(investor: Investor):
     createInvestor = await investors_collection.insert_one(investor)
     investorId = str(createInvestor.inserted_id)
     return JSONResponse({
-        "message": "Entrepreneur created successfully",
-        "entrepreneurId": str(investorId)
+        "message": "Investor created successfully",
+        "investorId": str(investorId)
     },status_code=201)
 
 async def deleteInvestor(investorId: str):

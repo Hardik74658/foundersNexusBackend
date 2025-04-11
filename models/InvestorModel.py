@@ -2,6 +2,7 @@ from pydantic import BaseModel,Field,validator
 from bson import ObjectId
 from typing import Optional,Dict,List,Any
 from models.UserModel import User
+# import datetime
 
 # id	UUID
 # user_id	UUID
@@ -20,6 +21,8 @@ def convert_objectid_to_str(value):
         return str(value)
     return value
 
+
+
 def convert_str_to_objectid(value):
     if isinstance(value, str):
         return ObjectId(value)
@@ -34,7 +37,7 @@ class Investor(BaseModel):
         default_factory=list,
         example=[{"startup_id": "uuid-456", "startup_name": "StartupTwo", "investment_amount": "50000", "date": "2021-05-20"}]
     )
-    preferred_funding_stage: str = Field(..., example="Seed")
+    # preferred_funding_stage: str = Field(..., example="Seed")
     contact_details: Optional[str] = Field(None, example="Encrypted Contact Info")
 
     # @validator("userId", pre=True)

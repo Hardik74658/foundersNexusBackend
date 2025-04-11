@@ -16,7 +16,7 @@ def send_mail(to, subject, body, attachment=None):
     msg['From'] = SMTP_MAIL
     msg['To'] = to
     msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+    msg.attach(MIMEText(body, 'html'))
 
     server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
     server.starttls()
@@ -27,4 +27,5 @@ def send_mail(to, subject, body, attachment=None):
     return {"message": "Email sent successfully"}
 
 
-send_mail("kelam@yopmail.com","test","this is test mail ")
+if __name__ == "__main__":
+    send_mail("kelam@yopmail.com","test","this is test mail ")

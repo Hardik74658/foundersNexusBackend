@@ -28,13 +28,13 @@ def convert_str_to_objectid(value):
 
 class Entrepreneur(BaseModel):
     userId: str
-    education_background: List[Dict[str, str]] = Field(
+    educationalBackground: List[Dict[str, str]] = Field(
         default_factory=list,
-        example=[{"degree": "MBA", "institution": "Harvard", "year": "2020", "field_of_study": "Business"}]
+        example=[{"degree": "MBA", "institution": "Harvard", "year": "2020"}]
     )
     skills: List[str] = Field(default_factory=list, example=["Programming", "Marketing"])
     area_of_interest: List[str] = Field(default_factory=list, example=["Fintech", "HealthTech"])
-    work_experience: List[Dict[str, str]] = Field(
+    workExperience: List[Dict[str, str]] = Field(
         default_factory=list,
         example=[{"company_name": "TechCorp", "role": "Developer", "duration": "2 years", "description": "Developed X"}]
     )
@@ -43,7 +43,7 @@ class Entrepreneur(BaseModel):
         example=[{"startup_id": None, "startup_name": "StartupOne", "role_in_startup": "Founder", "duration": "1 year"}]
     )
     certifications: Optional[List[str]] = Field(default_factory=list, example=["PMP", "AWS Certified"])
-    portfolio_links: Optional[List[str]] = Field(default_factory=list, example=["https://linkedin.com/in/johndoe"])
+    portfolioLinks: Optional[List[str]] = Field(default_factory=list, example=["https://linkedin.com/in/johndoe"])
 
     # @validator("userId", pre=True)
     # def convert_founders(cls, v):

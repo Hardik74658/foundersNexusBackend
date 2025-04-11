@@ -26,3 +26,6 @@ async def delete_post(postId: str):
 async def get_posts_by_user_id(userId: str):
     return await PostController.getPostsByUserId(userId)
 
+@router.post("/posts/{postId}/like/{userId}")
+async def like_toggle_on_post(postId: str,userId:str):
+    return await PostController.likeToggleOnPost(postId,userId)

@@ -1,10 +1,13 @@
-from models.UserModel import User,UserOut,UserLogin
+from models.UserModel import User,UserOut,UserLogin,ResetPasswordReq
 from config.database import users_collection,roles_collection,startups_collection
 from bson import ObjectId
 import bcrypt
-from fastapi import HTTPException, Response, status
+from fastapi import HTTPException, Response, status, Depends
 from fastapi.responses import JSONResponse
 from utils.SendMail import send_mail
+from bson.errors import InvalidId
+import datetime
+import jwt
 
 
 def convert_objectid_to_str(data):
@@ -16,6 +19,18 @@ def convert_objectid_to_str(data):
     elif isinstance(data, list):
         return [convert_objectid_to_str(item) for item in data]
     return data
+
+def convert_datetime_to_str(data):
+    """Recursively converts datetime objects in the data to strings."""
+    if isinstance(data, datetime.datetime):  # Use the datetime class directly
+        return data.isoformat()
+    elif isinstance(data, dict):
+        return {k: convert_datetime_to_str(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [convert_datetime_to_str(item) for item in data]
+    return data
+
+# CRUD ON USERS
 
 async def getAllUsers():
     users = await users_collection.find().to_list()
@@ -31,19 +46,24 @@ async def getAllUsers():
         if "currentStartup" in user and isinstance(user["currentStartup"],ObjectId):
             startup = await startups_collection.find_one({"_id": user["currentStartup"]})
             user["currentStartup"] = startup
+        if "password" in user:
+            user["password"]=str(user["password"])
 
     users = convert_objectid_to_str(users)
     return [UserOut(**user) for user in users]
 
-async def addUser(user:User):
+
+
+async def addUser(user: User):
     user.roleId = ObjectId(user.roleId)
     result = await users_collection.insert_one(user.dict())
-    send_mail(user.email,"Welcome to our platform","You have been successfully registered to our platform")   
+    user_id = str(result.inserted_id)
+
+    send_mail(user.email, "Welcome to our platform", "You have been successfully registered to our platform")
     return JSONResponse(
-        content={"message": "user created successfully", "user": str(result.inserted_id)},
+        content={"message": "user created successfully", "user": user_id},
         status_code=201
     )
-
 
 async def deleteUser(userId:str):
     foundUser = await users_collection.delete_one({"_id":ObjectId(userId)})
@@ -62,20 +82,167 @@ async def getUserById(userId:str):
     if role:
         role["_id"]=str(role["_id"])
         foundUser["role"]=role      
+    if "password" in foundUser:
+        foundUser["password"]=str(foundUser["password"])
+    foundUser = convert_objectid_to_str(foundUser)
     return UserOut(**foundUser)
 
 
-async def loginUser(user:UserLogin):
-    foundUser = await users_collection.find_one({"email":user.email})
+# FUNCTIONALITIES ON USER
+
+async def loginUser(user: UserLogin):
+    print(user)
+    foundUser = await users_collection.find_one({"email": user.email})
     if foundUser is None:
-        raise HTTPException(status_code=404,detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found")
 
-    foundUser["_id"] = str(foundUser["_id"])
-    foundUser["roleId"] = str(foundUser["roleId"])
-
-    if "password" in foundUser and bcrypt.checkpw(user.password.encode('utf-8'),foundUser["password"].encode('utf-8')):
-        role = await roles_collection.find_one({"_id":ObjectId(foundUser["roleId"])})
+    # Convert ObjectId fields to strings
+    foundUser = convert_objectid_to_str(foundUser)
+    if "password" in foundUser and bcrypt.checkpw(user.password.encode('utf-8'), foundUser["password"]):
+        foundUser["password"]=str(foundUser["password"])
+        role = await roles_collection.find_one({"_id": ObjectId(foundUser["roleId"])})
+        if role:
+            role = convert_objectid_to_str(role)
         foundUser["role"] = role
-        return {"message":"user login success","user":UserOut(**foundUser)}
+
+        return {"message": "user login success", "user": UserOut(**foundUser), "success": True}
     else:
-        raise HTTPException(status_code=404,detail="Invalid email or password")
+        raise HTTPException(status_code=404, detail="Invalid email or password")
+    
+
+
+async def toggleFollow(userId: str, followeeId: str):
+    # Get the current user (the follower)
+    current_user = await users_collection.find_one({"_id": ObjectId(userId)})
+    if not current_user:
+        raise HTTPException(404, "User Not Found")
+    
+    # Get the followee user (the one to be followed/unfollowed)
+    followee = await users_collection.find_one({"_id": ObjectId(followeeId)})
+    if not followee:
+        raise HTTPException(404, "Followee User Not Found")
+    
+    # Check if current user's ObjectId is in the followee's "followers" array
+    if ObjectId(followeeId) in current_user.get("followers", []):
+        # Remove the follower from followee's followers array
+        await users_collection.update_one(
+            {"_id": ObjectId(userId)},
+            {"$pull": {"followers": ObjectId(followeeId)}}
+        )
+        # Optionally, remove the followee from current user's following array
+        await users_collection.update_one(
+            {"_id": ObjectId(followeeId)},
+            {"$pull": {"following": ObjectId(userId)}}
+        )
+        return {"message": "Follower Removed successfully"}
+    else:
+        # Add the follower to followee's followers array
+        await users_collection.update_one(
+            {"_id": ObjectId(userId)},
+            {"$addToSet": {"followers": ObjectId(followeeId)}}
+        )
+        # Optionally, add the followee to current user's following array
+        await users_collection.update_one(
+            {"_id": ObjectId(followeeId)},
+            {"$addToSet": {"following": ObjectId(userId)}}
+        )
+        return {"message": "Follower Added successfully"}
+
+
+
+async def getFollowersByUserId(userId: str):
+    user = await users_collection.find_one({"_id": ObjectId(userId)})
+    if not user:
+        raise HTTPException(404, "User Not Found")
+    
+    followersData = []
+    if "followers" in user and isinstance(user["followers"], list):
+        for follower in user["followers"]:
+            try:
+                # Ensure follower is a valid ObjectId
+                follower_id = ObjectId(follower) if not isinstance(follower, ObjectId) else follower
+                followerData = await users_collection.find_one({"_id": follower_id})
+                if followerData:
+                    followersData.append(followerData)
+            except InvalidId:
+                # Skip invalid follower IDs
+                continue
+    
+    # Convert ObjectId fields and datetime objects to strings
+    followersData = convert_objectid_to_str(followersData)
+    followersData = convert_datetime_to_str(followersData)
+    
+    return JSONResponse(content={"followers": followersData}, status_code=200)
+
+async def getFollowingByUserId(userId: str):
+    user = await users_collection.find_one({"_id": ObjectId(userId)})
+    if not user:
+        raise HTTPException(404, "User Not Found")
+    
+    followingData = []
+    if "following" in user and isinstance(user["following"], list):
+        for followee in user["following"]:
+            try:
+                # Ensure followee is a valid ObjectId
+                followee_id = ObjectId(followee) if not isinstance(followee, ObjectId) else followee
+                followeeData = await users_collection.find_one({"_id": followee_id})
+                if followeeData:
+                    followingData.append(followeeData)
+            except InvalidId:
+                # Skip invalid followee IDs
+                continue
+    
+    # Convert ObjectId fields and datetime objects to strings
+    followingData = convert_objectid_to_str(followingData)
+    followingData = convert_datetime_to_str(followingData)
+    
+    return JSONResponse(content={"following": followingData}, status_code=200)
+
+
+# Forgot And Reset Pwd functionality With JWT Token
+
+SECRET_KEY = "royal"
+
+def generate_token(email: str):
+    expiration = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    payload = {"sub": email, "exp": expiration}
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
+
+
+async def forgotPassword(email: str):
+    foundUser = await users_collection.find_one({"email": email})
+    if not foundUser:
+        raise HTTPException(status_code=404, detail="Email not found")
+    
+    token = generate_token(email)
+    resetLink = f"http://localhost:5173/resetpassword/{token}"
+    body = f"""
+    <html>
+        <h1>HELLO THIS IS RESET PASSWORD LINK. IT EXPIRES IN 1 HOUR</h1>
+        <a href="{resetLink}">RESET PASSWORD</a>
+    </html>
+    """
+    subject = "RESET PASSWORD"
+    send_mail(email, subject, body)
+    return {"message": "Reset link sent successfully"}
+
+
+async def resetPassword(data: ResetPasswordReq):
+    try:
+        payload = jwt.decode(data.token, SECRET_KEY, algorithms="HS256")  # Payload: {"sub": "email...", "exp": ...}
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=421, detail="Token is not valid")
+        
+        hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt())
+        await users_collection.update_one({"email": email}, {"$set": {"password": hashed_password}})
+        
+        return {"message": "Password updated successfully"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=401, 
+            detail="The reset password link has expired. Please request a new one."
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid token provided")
