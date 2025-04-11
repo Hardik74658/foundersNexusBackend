@@ -2,10 +2,14 @@ from models.UserModel import User,UserOut,UserLogin,ResetPasswordReq
 from config.database import users_collection,roles_collection,startups_collection
 from bson import ObjectId
 import bcrypt
-from fastapi import HTTPException, Response, status, Depends
+from fastapi import File, Form, HTTPException, Response, UploadFile, status, Depends
 from fastapi.responses import JSONResponse
 from utils.SendMail import send_mail
+from utils.CloudinaryUpload import upload_image_from_buffer
 from bson.errors import InvalidId
+from pydantic import EmailStr, ValidationError
+
+
 import datetime
 import jwt
 
@@ -65,6 +69,102 @@ async def addUser(user: User):
         status_code=201
     )
 
+async def addUserWithFile(
+    fullName: str = Form(...),
+    email: EmailStr = Form(...),  # Validate email format
+    password: str = Form(...),
+    age: int = Form(None),
+    profilePicture: UploadFile = File(None),
+    coverPicture: UploadFile = File(None),
+    bio: str = Form(...),
+    location: str = Form(...),
+    roleId: str = Form(...),
+):
+    try:
+        # Log incoming data for debugging
+        # print("Received Data:")
+        # print(f"fullName: {fullName}, email: {email}, password: {password}, age: {age}")
+        # print(f"bio: {bio}, location: {location}, roleId: {roleId}")
+        # print(f"profilePicture: {profilePicture.filename if profilePicture else 'None'}")
+        # print(f"coverPicture: {coverPicture.filename if coverPicture else 'None'}")
+
+        # Validate ObjectId format for roleId
+        try:
+            roleId_object = ObjectId(roleId)  # Convert roleId to ObjectId
+        except InvalidId:
+            raise HTTPException(status_code=422, detail="Invalid roleId format")
+
+        user_data = {
+            "fullName": fullName,
+            "email": email,
+            "password": bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),  # Hash password
+            "age": age,
+            "bio": bio,
+            "location": location,
+            "roleId": roleId_object,  # Store roleId as ObjectId
+            "isVerified": False,
+            "isActive": True,
+            "followers": [],
+            "following": [],
+            "posts": [],
+            "currentStartup": None,
+        }
+
+        # Upload profile picture if provided
+        if profilePicture:
+            print("Reading profilePicture...")
+            user_data["profilePicture"] = await upload_image_from_buffer(profilePicture)
+        else:
+            user_data["profilePicture"] = ""
+
+        # Upload cover picture if needed (optional)
+        if coverPicture:
+            print("Reading coverPicture...")
+            user_data["coverPicture"] = await upload_image_from_buffer(coverPicture)
+        else:
+            user_data["coverPicture"] = ""
+
+        # # Validate user data using the User model
+        # try:
+        #     user = User(**user_data)
+        # except ValidationError as ve:
+        #     print("Validation Error:", ve.errors())
+        #     return JSONResponse(
+        #         content={"error": "Validation error", "details": ve.errors()},
+        #         status_code=422
+        #     )
+
+        # Save to database
+        result = await users_collection.insert_one(user_data)
+        user_id = str(result.inserted_id)
+
+        # Optional: Send welcome email
+        send_mail(email, "Welcome to FoundersNexus", "You have been successfully registered.")
+
+        return JSONResponse(
+            content={"message": "User created successfully", "user": user_id},
+            status_code=201
+        )
+
+    except ValidationError as ve:
+        # Log validation errors for debugging
+        print("Validation Error:", ve.errors())
+        return JSONResponse(
+            content={"error": "Validation error", "details": ve.errors()},
+            status_code=422
+        )
+    except HTTPException as http_exc:
+        # Log HTTP exceptions for debugging
+        print("HTTP Exception:", http_exc.detail)
+        raise http_exc
+    except Exception as e:
+        # Log unexpected errors for debugging
+        print("Unexpected Error:", str(e))
+        return JSONResponse(
+            content={"error": str(e)},
+            status_code=500
+        )
+
 async def deleteUser(userId:str):
     foundUser = await users_collection.delete_one({"_id":ObjectId(userId)})
     if foundUser.deleted_count == 1:
@@ -98,7 +198,7 @@ async def loginUser(user: UserLogin):
 
     # Convert ObjectId fields to strings
     foundUser = convert_objectid_to_str(foundUser)
-    if "password" in foundUser and bcrypt.checkpw(user.password.encode('utf-8'), foundUser["password"]):
+    if "password" in foundUser and bcrypt.checkpw(user.password.encode('utf-8'), foundUser["password"].encode('utf-8')):
         foundUser["password"]=str(foundUser["password"])
         role = await roles_collection.find_one({"_id": ObjectId(foundUser["roleId"])})
         if role:

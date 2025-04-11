@@ -1,7 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, File, Form, UploadFile
 from models.UserModel import User, UserLogin, ResetPasswordReq, UserOut
 from controllers.UserController import (
-    getAllUsers, getUserById, deleteUser, addUser, loginUser, toggleFollow,
+    addUserWithFile, getAllUsers, getUserById, deleteUser, addUser, loginUser, toggleFollow,
     getFollowersByUserId, getFollowingByUserId, forgotPassword, resetPassword,
     
 )
@@ -12,9 +12,41 @@ router = APIRouter()
 async def get_all_users():
     return await getAllUsers()
 
-@router.post("/users/",tags=["Users"])
-async def add_user(user:User):
-    return await addUser(user)
+@router.post("/users", tags=["Users"], include_in_schema=False)
+async def create_user_with_file_no_trailing_slash(
+    fullName: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    age: int = Form(None),
+    bio: str = Form(...),
+    location: str = Form(...),
+    roleId: str = Form(...),
+    profilePicture: UploadFile = File(None),
+    coverPicture: UploadFile = File(None)
+):
+    # Log incoming request for debugging
+    # print("Route: /users - create_user_with_file_no_trailing_slash")
+    return await addUserWithFile(
+        fullName, email, password, age, profilePicture, coverPicture, bio, location, roleId
+    )
+
+@router.post("/users/", tags=["Users"])
+async def create_user_with_file(
+    fullName: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    age: int = Form(None),
+    bio: str = Form(...),
+    location: str = Form(...),
+    roleId: str = Form(...),
+    profilePicture: UploadFile = File(None),
+    coverPicture: UploadFile = File(None)
+):
+    # Log incoming request for debugging
+    # print("Route: /users/ - create_user_with_file")
+    return await addUserWithFile(
+        fullName, email, password, age, profilePicture, coverPicture, bio, location, roleId
+    )
 
 @router.get("/users/{userId}",tags=["Users"])
 async def get_user_by_id(userId:str):

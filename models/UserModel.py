@@ -33,6 +33,7 @@ class User(BaseModel):
     password:str
     age:Optional[int]=None
     profilePicture:Optional[str] = ""
+    coverImage:Optional[str] = ""
     bio:str
     location:str
     roleId:str
@@ -49,7 +50,7 @@ class User(BaseModel):
     @validator("password", pre=True, always=True)
     def encrypt_password(cls, v):
         if isinstance(v, str):
-            return bcrypt.hashpw(v.encode("utf-8"), bcrypt.gensalt())
+            return bcrypt.hashpw(v.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         raise ValueError("Password must be a string")
         
 

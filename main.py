@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.RoleRoutes import router as RoleRouter
@@ -9,6 +10,9 @@ from routes.PostRoutes import router as PostRouter
 from routes.CommentRoutes import router as CommentRouter
 
 app = FastAPI()
+
+# Enable debug logging
+# logging.basicConfig(level=logging.DEBUG)
 
 app.include_router(RoleRouter)
 app.include_router(UserRouter)
