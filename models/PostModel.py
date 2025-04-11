@@ -30,21 +30,17 @@ def convert_str_to_objectid(value):
 class Post(BaseModel):
     userId: str
     content: str
-    title:str
-    image_url: Optional[str] = None
+    title: str
+    image_url: Optional[str] = None  # Revert to image_url
     likes: List[str] = []
     comments: List[str] = []
     created_at: datetime = Field(default_factory=current_time_ist)
     updated_at: datetime = Field(default_factory=current_time_ist)
 
-    
-    
-
 class PostOut(Post):
     id: str = Field(alias="_id")
     user: Optional[Dict[str, Any]] = None
-    commentsData: Optional[List[Dict[str,Any]]]=None
-
+    commentsData: Optional[List[Dict[str, Any]]] = None
 
     @validator("id", pre=True, always=True)
     def convert_id(cls, v):

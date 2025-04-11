@@ -56,7 +56,25 @@ async def getAllUsers():
     users = convert_objectid_to_str(users)
     return [UserOut(**user) for user in users]
 
+async def getUsersByRole(role_name: str):
+    role = await roles_collection.find_one({"name": role_name})
+    if not role:
+        raise HTTPException(status_code=404, detail=f"Role '{role_name}' not found")
 
+    role_id = role["_id"]
+    users = await users_collection.find({"roleId": role_id}).to_list()
+
+    for user in users:
+        if "password" in user:
+            user["password"] = str(user["password"])
+        if "roleId" in user:
+            user["roleId"] = str(user["roleId"])
+        if "currentStartup" in user and isinstance(user["currentStartup"], ObjectId):
+            startup = await startups_collection.find_one({"_id": user["currentStartup"]})
+            user["currentStartup"] = startup
+
+    users = convert_objectid_to_str(users)
+    return [UserOut(**user) for user in users]
 
 async def addUser(user: User):
     user.roleId = ObjectId(user.roleId)

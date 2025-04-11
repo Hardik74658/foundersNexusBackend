@@ -3,7 +3,7 @@ from models.UserModel import User, UserLogin, ResetPasswordReq, UserOut
 from controllers.UserController import (
     addUserWithFile, getAllUsers, getUserById, deleteUser, addUser, loginUser, toggleFollow,
     getFollowersByUserId, getFollowingByUserId, forgotPassword, resetPassword,
-    
+    getUsersByRole,
 )
 
 router = APIRouter()
@@ -11,6 +11,15 @@ router = APIRouter()
 @router.get("/users/",tags=["Users"])
 async def get_all_users():
     return await getAllUsers()
+
+
+@router.get("/users/founders/", tags=["Users"])
+async def get_entrepreneurs():
+    return await getUsersByRole("Founder")
+
+@router.get("/users/investors/", tags=["Users"])  # Add this line to handle trailing slash
+async def get_investors():
+    return await getUsersByRole("Investor")
 
 @router.post("/users", tags=["Users"], include_in_schema=False)
 async def create_user_with_file_no_trailing_slash(

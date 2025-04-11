@@ -5,9 +5,9 @@ from models.InvestorModel import Investor
 
 router = APIRouter()
 
-@router.get("/users/investors/",tags=["Investors"])
-async def get_all_investors():
-    return await getAllInvestors()
+# @router.get("/users/investors/",tags=["Investors"])
+# async def get_all_investors():
+#     return await getAllInvestors()
 
 @router.post("/users/investors/",tags=["Investors"])
 async def add_investor(investor: Investor):
