@@ -61,7 +61,7 @@ class UserOut(User):
     # Optional fields that you may not want to return in your API response.
     email: Optional[str] = None
     password: Optional[str] = None
-    currentStartupData: Optional[Dict[str,Any]] = None
+    currentStartupData: Optional[Dict[str, Any]] = None  # Updated to handle nested startup details
 
     @validator("id",pre=True,always=True)
     def convert_id(cls,v):
@@ -96,3 +96,11 @@ class UserLogin(BaseModel):
 class ResetPasswordReq(BaseModel):
     token: str
     password: str
+
+class UserUpdate(BaseModel):
+    fullName: Optional[str] = None
+    age: Optional[int] = None
+    bio: Optional[str] = None
+    location: Optional[str] = None
+    profilePicture: Optional[str] = None
+    coverImage: Optional[str] = None

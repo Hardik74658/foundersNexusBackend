@@ -1,9 +1,9 @@
 from fastapi import APIRouter, File, Form, UploadFile
-from models.UserModel import User, UserLogin, ResetPasswordReq, UserOut
+from models.UserModel import User, UserLogin, ResetPasswordReq, UserOut, UserUpdate
 from controllers.UserController import (
     addUserWithFile, getAllUsers, getUserById, deleteUser, addUser, loginUser, toggleFollow,
     getFollowersByUserId, getFollowingByUserId, forgotPassword, resetPassword,
-    getUsersByRole,
+    getUsersByRole, updateUser,
 )
 
 router = APIRouter()
@@ -49,12 +49,12 @@ async def create_user_with_file(
     location: str = Form(...),
     roleId: str = Form(...),
     profilePicture: UploadFile = File(None),
-    coverPicture: UploadFile = File(None)
+    coverImage: UploadFile = File(None)
 ):
     # Log incoming request for debugging
     # print("Route: /users/ - create_user_with_file")
     return await addUserWithFile(
-        fullName, email, password, age, profilePicture, coverPicture, bio, location, roleId
+        fullName, email, password, age, profilePicture, coverImage, bio, location, roleId
     )
 
 @router.get("/users/{userId}",tags=["Users"])
@@ -88,3 +88,7 @@ async def forgot_password(email: str):
 @router.post("/resetpassword")
 async def reset_password(data: ResetPasswordReq):
     return await resetPassword(data)
+
+@router.put("/users/{userId}", tags=["Users"])
+async def update_user(userId: str, user: UserUpdate):
+    return await updateUser(userId, user)

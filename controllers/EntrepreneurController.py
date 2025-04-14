@@ -1,7 +1,8 @@
 from config.database import entrepreneurs_collection,users_collection
-from models.EntrepreneurModel import Entrepreneur, EntrepreneurOut
+from models.EntrepreneurModel import Entrepreneur, EntrepreneurOut, EntrepreneurUpdate
 from controllers.UserController import deleteUser
 from bson import ObjectId
+from bson.errors import InvalidId
 from fastapi import HTTPException ,Response ,status
 from fastapi.responses import JSONResponse
 
@@ -107,3 +108,70 @@ async def deleteEntrepreneur(entrepreneurId:str):
     if deleted_user.deleted_count == 1 and deleted_entrepreneur.deleted_count == 1:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
         
+
+
+async def getEnterpreneurByUserId(userId:str):
+    # Check if the userId is a valid ObjectId
+    if not ObjectId.is_valid(userId):
+        raise HTTPException(status_code=400, detail="Invalid userId format")
+    
+    # Find the entrepreneur by userId
+    entrepreneur = await entrepreneurs_collection.find_one({"userId": ObjectId(userId)})
+    
+    # If no entrepreneur is found, raise a 404 error
+    if entrepreneur is None:
+        raise HTTPException(status_code=404, detail="Entrepreneur not found")
+    
+    # Convert ObjectId to string for the response
+    entrepreneur["_id"] = str(entrepreneur["_id"])
+    
+    return EntrepreneurOut(**entrepreneur)
+
+async def updateEntrepreneur(userId: str, entrepreneur_update: EntrepreneurUpdate):
+    try:
+        # Check if entrepreneur exists
+        entrepreneur = await entrepreneurs_collection.find_one({"userId": ObjectId(userId)})
+        if not entrepreneur:
+            raise HTTPException(status_code=404, detail="Entrepreneur not found")
+
+        # Create update dict with only provided fields
+        update_data = {
+            k: v for k, v in entrepreneur_update.dict(exclude_unset=True).items()
+            if v is not None
+        }
+
+        if not update_data:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid fields to update"
+            )
+
+        # Update the entrepreneur
+        update_result = await entrepreneurs_collection.update_one(
+            {"userId": ObjectId(userId)},
+            {"$set": update_data}
+        )
+
+        if update_result.modified_count == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Entrepreneur update failed"
+            )
+
+        # Get and return updated entrepreneur
+        updated_entrepreneur = await entrepreneurs_collection.find_one({"userId": ObjectId(userId)})
+        
+        # Get associated user data
+        if "userId" in updated_entrepreneur:
+            user = await users_collection.find_one({"_id": updated_entrepreneur["userId"]})
+            if user:
+                user = convert_objectid_to_str(user)
+                updated_entrepreneur["user"] = user
+
+        updated_entrepreneur = convert_objectid_to_str(updated_entrepreneur)
+        return EntrepreneurOut(**updated_entrepreneur)
+
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid entrepreneur ID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

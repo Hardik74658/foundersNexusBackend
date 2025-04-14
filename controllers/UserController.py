@@ -1,4 +1,4 @@
-from models.UserModel import User,UserOut,UserLogin,ResetPasswordReq
+from models.UserModel import User,UserOut,UserLogin,ResetPasswordReq,UserUpdate
 from config.database import users_collection,roles_collection,startups_collection
 from bson import ObjectId
 import bcrypt
@@ -71,7 +71,8 @@ async def getUsersByRole(role_name: str):
             user["roleId"] = str(user["roleId"])
         if "currentStartup" in user and isinstance(user["currentStartup"], ObjectId):
             startup = await startups_collection.find_one({"_id": user["currentStartup"]})
-            user["currentStartup"] = startup
+            user["currentStartupData"] = startup  # Populate nested startup details
+            user["currentStartup"] = str(user["currentStartup"])  # Keep the ID as a string
 
     users = convert_objectid_to_str(users)
     return [UserOut(**user) for user in users]
@@ -93,7 +94,7 @@ async def addUserWithFile(
     password: str = Form(...),
     age: int = Form(None),
     profilePicture: UploadFile = File(None),
-    coverPicture: UploadFile = File(None),
+    coverImage: UploadFile = File(None),
     bio: str = Form(...),
     location: str = Form(...),
     roleId: str = Form(...),
@@ -136,11 +137,11 @@ async def addUserWithFile(
             user_data["profilePicture"] = ""
 
         # Upload cover picture if needed (optional)
-        if coverPicture:
+        if coverImage:
             print("Reading coverPicture...")
-            user_data["coverPicture"] = await upload_image_from_buffer(coverPicture)
+            user_data["coverImage"] = await upload_image_from_buffer(coverImage)
         else:
-            user_data["coverPicture"] = ""
+            user_data["coverImage"] = ""
 
         # # Validate user data using the User model
         # try:
@@ -364,3 +365,47 @@ async def resetPassword(data: ResetPasswordReq):
         )
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=400, detail="Invalid token provided")
+
+async def updateUser(userId: str, user_update: UserUpdate):
+    try:
+        user = await users_collection.find_one({"_id": ObjectId(userId)})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Create update dict with only provided fields
+        update_data = {
+            k: v for k, v in user_update.dict(exclude_unset=True).items()
+            if v is not None
+        }
+
+        if not update_data:
+            raise HTTPException(
+                status_code=400,
+                detail="No valid fields to update"
+            )
+
+        # Update the user
+        update_result = await users_collection.update_one(
+            {"_id": ObjectId(userId)},
+            {"$set": update_data}
+        )
+
+        if update_result.modified_count == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="User update failed"
+            )
+
+        # Get and return updated user
+        updated_user = await users_collection.find_one({"_id": ObjectId(userId)})
+        updated_user = convert_objectid_to_str(updated_user)
+        
+        if "password" in updated_user:
+            updated_user["password"] = str(updated_user["password"])
+
+        return UserOut(**updated_user)
+
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid user ID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

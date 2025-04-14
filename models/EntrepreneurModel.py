@@ -58,7 +58,14 @@ class Entrepreneur(BaseModel):
     #     return value
     
 
-
+class EntrepreneurUpdate(BaseModel):
+    educationalBackground: Optional[List[Dict[str, str]]] = None
+    skills: Optional[List[str]] = None
+    area_of_interest: Optional[List[str]] = None
+    workExperience: Optional[List[Dict[str, str]]] = None
+    previous_startups: Optional[List[Dict[str, str]]] = None
+    certifications: Optional[List[str]] = None
+    portfolioLinks: Optional[List[str]] = None
 
 
 class EntrepreneurOut(Entrepreneur):
@@ -83,7 +90,6 @@ class EntrepreneurOut(Entrepreneur):
     def convert_nested_objectid(cls, v):
         if isinstance(v, dict) and "_id" in v:
             v["_id"] = str(v["_id"])  
-        return v        
-   
+        return v
 
-   
+

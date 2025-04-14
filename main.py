@@ -15,16 +15,16 @@ app = FastAPI()
 # logging.basicConfig(level=logging.DEBUG)
 
 app.include_router(RoleRouter)
-app.include_router(UserRouter)
 app.include_router(EntrepreneurRouter)
 app.include_router(InvestorRouter)
+app.include_router(UserRouter)
 app.include_router(StartupRouter)
 app.include_router(PostRouter)
 app.include_router(CommentRouter)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173","*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

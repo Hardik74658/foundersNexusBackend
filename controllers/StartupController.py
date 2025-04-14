@@ -1,8 +1,9 @@
 from config.database import startups_collection,users_collection
 from models.StartupModel import Startup, StartupOut
 from bson import ObjectId
-from fastapi import HTTPException, Response, status
+from fastapi import HTTPException, Response, status, UploadFile
 from fastapi.responses import JSONResponse
+from utils.CloudinaryUpload import upload_image_from_buffer  # Import the Cloudinary upload utility
 
 def convert_objectid_to_str(data):
     """Recursively converts ObjectId instances in the data to strings."""
@@ -31,51 +32,90 @@ async def getAllStartups():
     return [StartupOut(**startup) for startup in startups]
 
 async def getStartupById(startupId: str):
-    startup = await startups_collection.find_one({"_id": ObjectId(startupId)})
+    try:
+        startup = await startups_collection.find_one({"_id": ObjectId(startupId)})
 
-    if "founders" in startup:
-        for i, founder in enumerate(startup["founders"]):
-            founderId = ObjectId(founder)
-            founderData  = await users_collection.find_one({"_id": founderId})
-            if founderData:
-                startup["founders"][i] = founderData
+        if not startup:
+            raise HTTPException(status_code=404, detail="Startup not found")
 
-    if startup is None:
-        raise HTTPException(status_code=404, detail="Startup not found")
-    return StartupOut(**startup)
+        # Convert ObjectId fields to strings for founders
+        if "founders" in startup:
+            for i, founder_id in enumerate(startup["founders"]):
+                founder_data = await users_collection.find_one({"_id": founder_id})
+                if founder_data:
+                    startup["founders"][i] = convert_objectid_to_str(founder_data)
 
-async def addStartup(startup: Startup):
-    startup = startup.dict()
-    for i, item in enumerate(startup["founders"]):
-        startup["founders"][i] = ObjectId(item)  # Fix conversion to ObjectId
-    
-    if startup["previous_fundings"]:
-        for i, item in enumerate(startup["previous_fundings"]):
-            if "investors" in item and item["investors"] is not None:
-                for j, investor in enumerate(item["investors"]):
-                    if "investorId" in investor and investor["investorId"] is not None:
-                        investor["investorId"] = ObjectId(investor["investorId"])
+        # Convert ObjectId fields to strings for previous fundings
+        if "previous_fundings" in startup:
+            for funding in startup["previous_fundings"]:
+                if "investors" in funding and funding["investors"]:
+                    for investor in funding["investors"]:
+                        if "investorId" in investor and isinstance(investor["investorId"], ObjectId):
+                            investor["investorId"] = str(investor["investorId"])
 
-    if startup["equity_split"]:
-        for i, item in enumerate(startup["equity_split"]):
-            if "userId" in item and item["userId"] is not None:
-                item["userId"] = ObjectId(item["userId"])
+        # Convert ObjectId fields to strings for equity split
+        if "equity_split" in startup:
+            for equity in startup["equity_split"]:
+                if "userId" in equity and isinstance(equity["userId"], ObjectId):
+                    equity["userId"] = str(equity["userId"])
 
-    founder_ids = startup["founders"]
+        # Convert the entire startup document to a response model
+        startup = convert_objectid_to_str(startup)
+        return StartupOut(**startup)
+    except Exception as e:
+        print(f"Error in getStartupById: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-    createsStartup = await startups_collection.insert_one(startup)
-    startupId = str(createsStartup.inserted_id)
+async def addStartup(startup: Startup, logo: UploadFile = None):
+    try:
+        # Convert the startup object to a dictionary
+        startup_data = startup.dict()
 
-    for founder_id in founder_ids:
-        await users_collection.update_one(
-            {"_id": ObjectId(founder_id)},
-            {"$set": {"currentStartup": ObjectId(startupId)}}
+        # Upload the logo to Cloudinary if provided
+        if logo:
+            print("Uploading logo to Cloudinary...")  # Debugging log
+            startup_data["logo_url"] = await upload_image_from_buffer(logo)
+            if not startup_data["logo_url"]:
+                raise HTTPException(status_code=500, detail="Failed to upload logo to Cloudinary")
+        else:
+            startup_data["logo_url"] = ""
+
+        # Convert founders to ObjectId
+        startup_data["founders"] = [ObjectId(founder) for founder in startup_data["founders"]]
+
+        # Convert previous fundings' investor IDs to ObjectId
+        if startup_data.get("previous_fundings"):
+            for funding in startup_data["previous_fundings"]:
+                if "investors" in funding and funding["investors"]:
+                    for investor in funding["investors"]:
+                        if "investorId" in investor and investor["investorId"]:
+                            investor["investorId"] = ObjectId(investor["investorId"])
+
+        # Convert equity split user IDs to ObjectId
+        if startup_data.get("equity_split"):
+            for equity in startup_data["equity_split"]:
+                if "userId" in equity and equity["userId"]:
+                    equity["userId"] = ObjectId(equity["userId"])
+
+        # Insert the startup into the database
+        result = await startups_collection.insert_one(startup_data)
+        startup_id = str(result.inserted_id)
+
+        # Update founders' currentStartup field
+        for founder_id in startup_data["founders"]:
+            await users_collection.update_one(
+                {"_id": founder_id},
+                {"$set": {"currentStartup": ObjectId(startup_id)}}
+            )
+
+        return JSONResponse(
+            content={"message": "Startup created successfully", "startupId": startup_id},
+            status_code=201
         )
-
-    return JSONResponse({
-        "message": "Startup created successfully",
-        "startupId": str(startupId)
-    }, status_code=201)
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in addStartup: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 async def deleteStartup(startupId: str):
     try:
