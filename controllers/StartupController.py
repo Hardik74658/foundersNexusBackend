@@ -125,7 +125,7 @@ async def deleteStartup(startupId: str):
     
     # Delete the startup document
     delete_result = await startups_collection.delete_one({"_id": startup_oid})
-    if delete_result.deleted_count == 0:
+    if (delete_result.deleted_count == 0):
         raise HTTPException(status_code=404, detail="Startup not found")
     
     # Update all user documents where currentStartup equals this startup ObjectId
@@ -136,3 +136,103 @@ async def deleteStartup(startupId: str):
     
     # Return a 204 No Content response
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+async def updateStartup(startupId: str, startup_data: dict, logo: UploadFile = None):
+    try:
+        # Validate the startup ID
+        try:
+            startup_oid = ObjectId(startupId)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid startup ID format")
+
+        # Check if the startup exists
+        existing_startup = await startups_collection.find_one({"_id": startup_oid})
+        if not existing_startup:
+            raise HTTPException(status_code=404, detail="Startup not found")
+
+        # Debugging log: Inspect incoming data
+        print(f"Updating startup with ID: {startupId}")
+        print(f"Incoming data: {startup_data}")
+
+        # Upload the logo to Cloudinary if provided
+        if logo:
+            print("Uploading logo to Cloudinary...")  # Debugging log
+            startup_data["logo_url"] = await upload_image_from_buffer(logo)
+            if not startup_data["logo_url"]:
+                raise HTTPException(status_code=500, detail="Failed to upload logo to Cloudinary")
+
+        # Convert founders to ObjectId if provided
+        if "founders" in startup_data:
+            try:
+                startup_data["founders"] = [ObjectId(founder) for founder in startup_data["founders"]]
+            except Exception as e:
+                print(f"Error converting founders to ObjectId: {e}")
+                raise HTTPException(status_code=400, detail="Invalid founders format")
+
+        # Convert previous fundings' investor IDs to ObjectId if provided
+        if "previous_fundings" in startup_data:
+            for funding in startup_data["previous_fundings"]:
+                if "investors" in funding and funding["investors"]:
+                    for investor in funding["investors"]:
+                        if "investorId" in investor and investor["investorId"]:
+                            try:
+                                investor["investorId"] = ObjectId(investor["investorId"])
+                            except Exception as e:
+                                print(f"Error converting investorId to ObjectId: {e}")
+                                raise HTTPException(status_code=400, detail="Invalid investorId format")
+
+        # Convert equity split user IDs to ObjectId if provided
+        if "equity_split" in startup_data:
+            for equity in startup_data["equity_split"]:
+                if "userId" in equity:
+                    if equity["userId"] is None:
+                        # Remove invalid userId entries
+                        equity.pop("userId")
+                    else:
+                        try:
+                            equity["userId"] = ObjectId(equity["userId"])
+                        except Exception as e:
+                            print(f"Error converting userId to ObjectId: {e}")
+                            raise HTTPException(status_code=400, detail="Invalid userId format")
+
+        # Debugging log: Inspect processed data
+        print(f"Processed data for update: {startup_data}")
+
+        # Allow update if at least one field is present or logo is being updated
+        if not startup_data:
+            if logo:
+                startup_data = {"logo_url": await upload_image_from_buffer(logo)}
+            else:
+                raise HTTPException(status_code=400, detail="No valid fields to update")
+
+        update_result = await startups_collection.update_one(
+            {"_id": startup_oid},
+            {"$set": startup_data}
+        )
+
+        if update_result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="Startup update failed")
+
+        # Get and return updated startup
+        updated_startup = await startups_collection.find_one({"_id": startup_oid})
+
+        # --- Populate founders with user objects (same as getAllStartups) ---
+        if "founders" in updated_startup:
+            for i, founder in enumerate(updated_startup["founders"]):
+                founderId = ObjectId(founder)
+                founderData = await users_collection.find_one({"_id": founderId})
+                if founderData:
+                    updated_startup["founders"][i] = convert_objectid_to_str(founderData)
+
+        updated_startup = convert_objectid_to_str(updated_startup)
+        return JSONResponse(
+            content={
+                "message": "Startup updated successfully",
+                "startup": StartupOut(**updated_startup)
+            },
+            status_code=200
+        )
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in updateStartup: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating startup: {str(e)}")

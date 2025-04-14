@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from models.StartupModel import Startup
-from controllers.StartupController import addStartup, getAllStartups, getStartupById, deleteStartup
+from controllers.StartupController import addStartup, getAllStartups, getStartupById, deleteStartup, updateStartup
 import json
 
 router = APIRouter()
@@ -47,6 +47,46 @@ async def create_startup_with_file(
         raise HTTPException(status_code=400, detail=f"Invalid JSON format: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating startup: {str(e)}")
+
+@router.put("/startups/{startupId}", tags=["Startups"])
+async def update_startup(
+    startupId: str,
+    startup_name: str = Form(None),
+    description: str = Form(None),
+    industry: str = Form(None),
+    website: str = Form(None),
+    market_size: str = Form(None),
+    revenue_model: str = Form(None),
+    founders: str = Form(None),  # JSON string of founder IDs
+    previous_fundings: str = Form(None),  # JSON string of funding details
+    equity_split: str = Form(None),  # JSON string of equity split details
+    logo: UploadFile = File(None)
+):
+    try:
+        founders_list = json.loads(founders) if founders else None
+        previous_fundings_list = json.loads(previous_fundings) if previous_fundings else None
+        equity_split_list = json.loads(equity_split) if equity_split else None
+
+        startup_data = {
+            "startup_name": startup_name,
+            "description": description,
+            "industry": industry,
+            "website": website,
+            "market_size": market_size,
+            "revenue_model": revenue_model,
+            "founders": founders_list,
+            "previous_fundings": previous_fundings_list,
+            "equity_split": equity_split_list,
+        }
+        startup_data = {k: v for k, v in startup_data.items() if v is not None}
+        print(f"Data sent to updateStartup: {startup_data}")
+
+        # Directly return the JSON response from the controller
+        return await updateStartup(startupId, startup_data, logo)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON format: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating startup: {str(e)}")
 
 @router.get("/startups/{startupId}", tags=["Startups"])
 async def get_startup_by_id(startupId: str):
