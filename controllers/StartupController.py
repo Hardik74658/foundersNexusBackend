@@ -228,7 +228,6 @@ async def updateStartup(startupId: str, startup_data: dict, logo: UploadFile = N
         return JSONResponse(
             content={
                 "message": "Startup updated successfully",
-                "startup": StartupOut(**updated_startup)
             },
             status_code=200
         )

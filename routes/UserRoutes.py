@@ -1,9 +1,9 @@
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, UploadFile, Query
 from models.UserModel import User, UserLogin, ResetPasswordReq, UserOut, UserUpdate
 from controllers.UserController import (
     addUserWithFile, getAllUsers, getUserById, deleteUser, addUser, loginUser, toggleFollow,
     getFollowersByUserId, getFollowingByUserId, forgotPassword, resetPassword,
-    getUsersByRole, updateUser,
+    getUsersByRole, updateUser, getRecentSignups,
 )
 
 router = APIRouter()
@@ -92,3 +92,8 @@ async def reset_password(data: ResetPasswordReq):
 @router.put("/users/{userId}", tags=["Users"])
 async def update_user(userId: str, user: UserUpdate):
     return await updateUser(userId, user)
+
+@router.get("/admin/recent-signups", tags=["Admin"])
+async def get_recent_signups(days: int = Query(30, description="Number of days to look back for recent signups")):
+    """Get users who signed up in the last specified number of days"""
+    return await getRecentSignups(days)

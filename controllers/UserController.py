@@ -2,10 +2,11 @@ from models.UserModel import User,UserOut,UserLogin,ResetPasswordReq,UserUpdate
 from config.database import users_collection,roles_collection,startups_collection
 from bson import ObjectId
 import bcrypt
-from fastapi import File, Form, HTTPException, Response, UploadFile, status, Depends
+from fastapi import File, Form, HTTPException, Response, UploadFile, status
 from fastapi.responses import JSONResponse
 from utils.SendMail import send_mail
 from utils.CloudinaryUpload import upload_image_from_buffer
+from utils.CometChatIntegration import register_user_with_cometchat
 from bson.errors import InvalidId
 from pydantic import EmailStr, ValidationError
 
@@ -42,14 +43,16 @@ async def getAllUsers():
     for user in users:
         if "roleId" in user and isinstance(user["roleId"],ObjectId):
             role = await roles_collection.find_one({"_id": user["roleId"]})
-            # print(role)
             user["roleId"] = str(user["roleId"])
         if role:
             role["_id"]=str(role["_id"])
             user["role"]=role        
         if "currentStartup" in user and isinstance(user["currentStartup"],ObjectId):
             startup = await startups_collection.find_one({"_id": user["currentStartup"]})
-            user["currentStartup"] = startup
+            # Only assign the string ID to currentStartup
+            user["currentStartup"] = str(user["currentStartup"])
+            # Optionally, include the startup data under a different key
+            # user["currentStartupData"] = startup
         if "password" in user:
             user["password"]=str(user["password"])
 
@@ -82,6 +85,17 @@ async def addUser(user: User):
     result = await users_collection.insert_one(user.dict())
     user_id = str(result.inserted_id)
 
+    # Register user with CometChat
+    try:
+        await register_user_with_cometchat(
+            user_id=user_id,
+            full_name=user.fullName,
+            email=user.email
+        )
+    except Exception as e:
+        # Log error but don't fail registration if CometChat integration fails
+        print(f"Error registering user with CometChat: {str(e)}")
+
     send_mail(user.email, "Welcome to our platform", "You have been successfully registered to our platform")
     return JSONResponse(
         content={"message": "user created successfully", "user": user_id},
@@ -100,13 +114,6 @@ async def addUserWithFile(
     roleId: str = Form(...),
 ):
     try:
-        # Log incoming data for debugging
-        # print("Received Data:")
-        # print(f"fullName: {fullName}, email: {email}, password: {password}, age: {age}")
-        # print(f"bio: {bio}, location: {location}, roleId: {roleId}")
-        # print(f"profilePicture: {profilePicture.filename if profilePicture else 'None'}")
-        # print(f"coverPicture: {coverPicture.filename if coverPicture else 'None'}")
-
         # Validate ObjectId format for roleId
         try:
             roleId_object = ObjectId(roleId)  # Convert roleId to ObjectId
@@ -129,10 +136,12 @@ async def addUserWithFile(
             "currentStartup": None,
         }
 
+        profile_picture_url = ""
         # Upload profile picture if provided
         if profilePicture:
             print("Reading profilePicture...")
-            user_data["profilePicture"] = await upload_image_from_buffer(profilePicture)
+            profile_picture_url = await upload_image_from_buffer(profilePicture)
+            user_data["profilePicture"] = profile_picture_url
         else:
             user_data["profilePicture"] = ""
 
@@ -143,19 +152,21 @@ async def addUserWithFile(
         else:
             user_data["coverImage"] = ""
 
-        # # Validate user data using the User model
-        # try:
-        #     user = User(**user_data)
-        # except ValidationError as ve:
-        #     print("Validation Error:", ve.errors())
-        #     return JSONResponse(
-        #         content={"error": "Validation error", "details": ve.errors()},
-        #         status_code=422
-        #     )
-
         # Save to database
         result = await users_collection.insert_one(user_data)
         user_id = str(result.inserted_id)
+
+        # Register user with CometChat
+        try:
+            await register_user_with_cometchat(
+                user_id=user_id,
+                full_name=fullName,
+                profile_picture=profile_picture_url,
+                email=email
+            )
+        except Exception as e:
+            # Log error but don't fail registration if CometChat integration fails
+            print(f"Error registering user with CometChat: {str(e)}")
 
         # Optional: Send welcome email
         send_mail(email, "Welcome to FoundersNexus", "You have been successfully registered.")
@@ -187,6 +198,13 @@ async def addUserWithFile(
 async def deleteUser(userId:str):
     foundUser = await users_collection.delete_one({"_id":ObjectId(userId)})
     if foundUser.deleted_count == 1:
+        # Optionally delete user from CometChat as well
+        try:
+            from utils.CometChatIntegration import CometChatService
+            await CometChatService.delete_user(userId)
+        except Exception as e:
+            # Log the error but don't prevent user deletion
+            print(f"Error deleting user from CometChat: {str(e)}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     raise HTTPException(status_code=404,detail="User not found")
     
@@ -409,3 +427,36 @@ async def updateUser(userId: str, user_update: UserUpdate):
         raise HTTPException(status_code=400, detail="Invalid user ID format")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+async def getRecentSignups(days: int = 7):
+    """Get users who signed up in the last specified number of days"""
+    # Calculate the date from which to fetch users
+    cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days)
+    
+    # Query for users created after the cutoff date, sorted by creation date (newest first)
+    recent_users = await users_collection.find(
+        {"created_at": {"$gte": cutoff_date}}
+    ).sort("created_at", -1).to_list(length=None)
+    
+    # Process users similar to getAllUsers() function
+    for user in recent_users:
+        if "roleId" in user and isinstance(user["roleId"], ObjectId):
+            role = await roles_collection.find_one({"_id": user["roleId"]})
+            user["roleId"] = str(user["roleId"])
+            if role:
+                role["_id"] = str(role["_id"])
+                user["role"] = role
+        
+        if "currentStartup" in user and isinstance(user["currentStartup"], ObjectId):
+            startup = await startups_collection.find_one({"_id": user["currentStartup"]})
+            user["currentStartup"] = str(user["currentStartup"])
+            if startup:
+                user["currentStartupData"] = convert_objectid_to_str(startup)
+        
+        if "password" in user:
+            user["password"] = str(user["password"])
+    
+    # Convert ObjectIds and datetimes to strings
+    recent_users = convert_objectid_to_str(recent_users)
+    
+    return [UserOut(**user) for user in recent_users]
