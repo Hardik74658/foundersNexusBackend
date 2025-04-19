@@ -45,18 +45,6 @@ class Entrepreneur(BaseModel):
     certifications: Optional[List[str]] = Field(default_factory=list, example=["PMP", "AWS Certified"])
     portfolioLinks: Optional[List[str]] = Field(default_factory=list, example=["https://linkedin.com/in/johndoe"])
 
-    # @validator("userId", pre=True)
-    # def convert_founders(cls, v):
-    #     return convert_str_to_objectid(v)
-    
-    # @validator("previous_startups", pre=True, always=True)  
-    # def convert_startup_ids_to_strings(cls, value):
-    #     if value:
-    #         for i, item in enumerate(value):
-    #             if item["startup_id"] is not None:
-    #               return convert_str_to_objectid(item["startup_id"])
-    #     return value
-    
 
 class EntrepreneurUpdate(BaseModel):
     educationalBackground: Optional[List[Dict[str, str]]] = None
@@ -74,17 +62,13 @@ class EntrepreneurOut(Entrepreneur):
     user: Optional[Dict[str, Any]] = None
 
 
-    @validator("id",  pre=True, always=True)
-    def convert_objectid_to_str(cls, v):
-        if isinstance(v, ObjectId):
-            return str(v)
-        return v
+    @validator("id", pre=True, always=True)
+    def convert_id_to_str(cls, v):
+        return convert_objectid_to_str(v)
 
-    @validator("userId",  pre=True, always=True)
-    def convert_objectid_to_str(cls, v):
-        if isinstance(v, ObjectId):
-            return str(v)
-        return v
+    @validator("userId", pre=True, always=True)
+    def convert_userid_to_str(cls, v):
+        return convert_objectid_to_str(v)
     
     @validator("user", pre=True, always=True)
     def convert_nested_objectid(cls, v):

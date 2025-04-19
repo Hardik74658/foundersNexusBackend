@@ -15,3 +15,4 @@ investors_collection = database["investors"]
 startups_collection = database["startups"]
 posts_collection = database["posts"]
 comments_collection = database["comments"]
+pitchdecks_collection = database["pitchdecks"]  # Add this line
