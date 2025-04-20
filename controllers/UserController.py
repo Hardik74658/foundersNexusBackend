@@ -19,6 +19,14 @@ def convert_objectid_to_str(data):
     """Recursively converts ObjectId instances in the data to strings."""
     if isinstance(data, ObjectId):
         return str(data)
+    elif isinstance(data, bytes):
+        try:
+            # Try to decode bytes as UTF-8 first
+            return data.decode('utf-8')
+        except UnicodeDecodeError:
+            # If that fails, use base64 encoding
+            import base64
+            return base64.b64encode(data).decode('ascii')
     elif isinstance(data, dict):
         return {k: convert_objectid_to_str(v) for k, v in data.items()}
     elif isinstance(data, list):
