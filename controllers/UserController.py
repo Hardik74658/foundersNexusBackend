@@ -43,6 +43,18 @@ def convert_datetime_to_str(data):
         return [convert_datetime_to_str(item) for item in data]
     return data
 
+def sanitize_image_field(value):
+    """Ensure image fields are always a string or empty string."""
+    if isinstance(value, list):
+        # Return the first non-None string, or empty string if not found
+        for v in value:
+            if isinstance(v, str) and v:
+                return v
+        return ""
+    if value is None:
+        return ""
+    return value
+
 # CRUD ON USERS
 
 async def getAllUsers():
@@ -63,6 +75,10 @@ async def getAllUsers():
             # user["currentStartupData"] = startup
         if "password" in user:
             user["password"]=str(user["password"])
+        if "profilePicture" in user:
+            user["profilePicture"] = sanitize_image_field(user["profilePicture"])
+        if "coverImage" in user:
+            user["coverImage"] = sanitize_image_field(user["coverImage"])
 
     users = convert_objectid_to_str(users)
     return [UserOut(**user) for user in users]
@@ -84,6 +100,10 @@ async def getUsersByRole(role_name: str):
             startup = await startups_collection.find_one({"_id": user["currentStartup"]})
             user["currentStartupData"] = startup  # Populate nested startup details
             user["currentStartup"] = str(user["currentStartup"])  # Keep the ID as a string
+        if "profilePicture" in user:
+            user["profilePicture"] = sanitize_image_field(user["profilePicture"])
+        if "coverImage" in user:
+            user["coverImage"] = sanitize_image_field(user["coverImage"])
 
     users = convert_objectid_to_str(users)
     return [UserOut(**user) for user in users]
@@ -229,6 +249,10 @@ async def getUserById(userId:str):
         foundUser["role"]=role      
     if "password" in foundUser:
         foundUser["password"]=str(foundUser["password"])
+    if "profilePicture" in foundUser:
+        foundUser["profilePicture"] = sanitize_image_field(foundUser["profilePicture"])
+    if "coverImage" in foundUser:
+        foundUser["coverImage"] = sanitize_image_field(foundUser["coverImage"])
     foundUser = convert_objectid_to_str(foundUser)
     return UserOut(**foundUser)
 
@@ -243,6 +267,10 @@ async def loginUser(user: UserLogin):
 
     # Convert ObjectId fields to strings
     foundUser = convert_objectid_to_str(foundUser)
+    if "profilePicture" in foundUser:
+        foundUser["profilePicture"] = sanitize_image_field(foundUser["profilePicture"])
+    if "coverImage" in foundUser:
+        foundUser["coverImage"] = sanitize_image_field(foundUser["coverImage"])
     if "password" in foundUser and bcrypt.checkpw(user.password.encode('utf-8'), foundUser["password"].encode('utf-8')):
         foundUser["password"]=str(foundUser["password"])
         role = await roles_collection.find_one({"_id": ObjectId(foundUser["roleId"])})
@@ -380,7 +408,7 @@ async def resetPassword(data: ResetPasswordReq):
         if not email:
             raise HTTPException(status_code=421, detail="Token is not valid")
         
-        hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt())
+        hashed_password = bcrypt.hashpw(data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         await users_collection.update_one({"email": email}, {"$set": {"password": hashed_password}})
         
         return {"message": "Password updated successfully"}
@@ -426,6 +454,10 @@ async def updateUser(userId: str, user_update: UserUpdate):
         updated_user = await users_collection.find_one({"_id": ObjectId(userId)})
         updated_user = convert_objectid_to_str(updated_user)
         
+        if "profilePicture" in updated_user:
+            updated_user["profilePicture"] = sanitize_image_field(updated_user["profilePicture"])
+        if "coverImage" in updated_user:
+            updated_user["coverImage"] = sanitize_image_field(updated_user["coverImage"])
         if "password" in updated_user:
             updated_user["password"] = str(updated_user["password"])
 
@@ -463,6 +495,10 @@ async def getRecentSignups(days: int = 7):
         
         if "password" in user:
             user["password"] = str(user["password"])
+        if "profilePicture" in user:
+            user["profilePicture"] = sanitize_image_field(user["profilePicture"])
+        if "coverImage" in user:
+            user["coverImage"] = sanitize_image_field(user["coverImage"])
     
     # Convert ObjectIds and datetimes to strings
     recent_users = convert_objectid_to_str(recent_users)

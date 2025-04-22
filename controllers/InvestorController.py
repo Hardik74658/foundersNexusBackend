@@ -72,6 +72,36 @@ async def deleteInvestor(investorId: str):
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+async def updateInvestorProfile(userId: str, investor_update: dict):
+    """
+    Update the investor profile for a given userId.
+    Only updates fields provided in investor_update.
+    """
+    try:
+        user_obj_id = ObjectId(userId)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid userId format")
+
+    investor = await investors_collection.find_one({"userId": user_obj_id})
+    if not investor:
+        raise HTTPException(status_code=404, detail="Investor profile not found")
+
+    update_data = {k: v for k, v in investor_update.items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+
+    result = await investors_collection.update_one(
+        {"userId": user_obj_id},
+        {"$set": update_data}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=400, detail="Investor profile update failed")
+
+    updated_investor = await investors_collection.find_one({"userId": user_obj_id})
+    updated_investor = convert_objectid_to_str(updated_investor)
+    return updated_investor
+
+
 # The parameter exclude_unset=True in investor.dict(exclude_unset=True) tells Pydantic to only include the fields that were explicitly set when creating the model instance, and exclude any default values that haven't been provided. This is useful for minimizing the data that gets inserted into the database, as it prevents unnecessary fields with default values from being sent.
 
 
