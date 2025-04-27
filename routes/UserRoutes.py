@@ -21,23 +21,23 @@ async def get_entrepreneurs():
 async def get_investors():
     return await getUsersByRole("Investor")
 
-@router.post("/users", tags=["Users"], include_in_schema=False)
-async def create_user_with_file_no_trailing_slash(
-    fullName: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    age: int = Form(None),
-    bio: str = Form(...),
-    location: str = Form(...),
-    roleId: str = Form(...),
-    profilePicture: UploadFile = File(None),
-    coverPicture: UploadFile = File(None)
-):
-    # Log incoming request for debugging
-    # print("Route: /users - create_user_with_file_no_trailing_slash")
-    return await addUserWithFile(
-        fullName, email, password, age, profilePicture, coverPicture, bio, location, roleId
-    )
+# @router.post("/users", tags=["Users"], include_in_schema=False)
+# async def create_user_with_file_no_trailing_slash(
+#     fullName: str = Form(...),
+#     email: str = Form(...),
+#     password: str = Form(...),
+#     age: int = Form(None),
+#     bio: str = Form(...),
+#     location: str = Form(...),
+#     roleId: str = Form(...),
+#     profilePicture: UploadFile = File(None),
+#     coverPicture: UploadFile = File(None)
+# ):
+#     # Log incoming request for debugging
+#     # print("Route: /users - create_user_with_file_no_trailing_slash")
+#     return await addUserWithFile(
+#         fullName, email, password, age, profilePicture, coverPicture, bio, location, roleId
+#     )
 
 @router.post("/users/", tags=["Users"])
 async def create_user_with_file(

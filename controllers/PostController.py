@@ -22,7 +22,7 @@ def convert_objectid_to_str(data):
 #CRUD OF POST
 
 async def getAllPosts():
-    posts = await posts_collection.find().to_list()
+    posts = await posts_collection.find().to_list(length=100)
     if len(posts) > 0:
         for i, post in enumerate(posts):
             if "userId" in post and isinstance(post["userId"], ObjectId):
