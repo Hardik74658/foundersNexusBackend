@@ -2,7 +2,7 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-DATABASE_NAME ="fastapi"
+DATABASE_NAME ="foundersNexus"
 
 # Create a MongoDB client
 client = AsyncIOMotorClient(DATABASE_URL)
