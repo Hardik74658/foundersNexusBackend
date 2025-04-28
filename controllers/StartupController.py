@@ -1,9 +1,10 @@
-from config.database import startups_collection,users_collection
+from config.database import startups_collection, users_collection, investors_collection
 from models.StartupModel import Startup, StartupOut
 from bson import ObjectId
 from fastapi import HTTPException, Response, status, UploadFile
 from fastapi.responses import JSONResponse
 from utils.CloudinaryUpload import upload_image_from_buffer  # Import the Cloudinary upload utility
+from datetime import datetime
 
 def convert_objectid_to_str(data):
     """Recursively converts ObjectId instances in the data to strings."""
@@ -107,6 +108,46 @@ async def addStartup(startup: Startup, logo: UploadFile = None):
                 {"_id": founder_id},
                 {"$set": {"currentStartup": ObjectId(startup_id)}}
             )
+        
+        # Only add this startup to investors who are listed in the previous_fundings
+        if startup_data.get("previous_fundings"):
+            # Extract all unique investor IDs across all funding rounds
+            investor_ids = set()
+            for funding in startup_data.get("previous_fundings", []):
+                for investor in funding.get("investors", []):
+                    if "investorId" in investor and investor["investorId"]:
+                        investor_ids.add(investor["investorId"])
+            
+            # For each relevant investor, add this startup to their previous_investments
+            for investor_id in investor_ids:
+                investor = await investors_collection.find_one({"userId": investor_id})
+                if investor:
+                    # Find the latest funding record for this investor to get amount and date
+                    latest_funding = None
+                    latest_date = None
+                    
+                    for funding in startup_data.get("previous_fundings", []):
+                        for inv in funding.get("investors", []):
+                            if inv.get("investorId") == investor_id:
+                                funding_date = funding.get("date")
+                                if not latest_date or funding_date > latest_date:
+                                    latest_funding = funding
+                                    latest_date = funding_date
+                    
+                    # Create investment record with data from the funding round
+                    investment_record = {
+                        "startup_id": startup_id,
+                        "startup_name": startup_data.get("startup_name", ""),
+                        "investment_amount": latest_funding.get("amount", "") if latest_funding else "",
+                        "date": latest_funding.get("date", datetime.now().strftime("%Y-%m-%d")) if latest_funding else datetime.now().strftime("%Y-%m-%d")
+                    }
+                    
+                    # Add this startup to the investor's previous_investments
+                    await investors_collection.update_one(
+                        {"_id": investor["_id"]},
+                        {"$push": {"previous_investments": investment_record}}
+                    )
+                    print(f"Added startup {startup_id} to investor {str(investor['_id'])} previous investments")
 
         return JSONResponse(
             content={"message": "Startup created successfully", "startupId": startup_id},

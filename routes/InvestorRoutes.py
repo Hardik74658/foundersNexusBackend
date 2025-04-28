@@ -1,4 +1,4 @@
-from controllers.InvestorController import getAllInvestors, addInvestor, getInvestorById, deleteInvestor, updateInvestorProfile
+from controllers.InvestorController import getAllInvestors, addInvestor, getInvestorByUserId, deleteInvestor, updateInvestorProfile
 from fastapi import APIRouter, Body
 from models.InvestorModel import Investor 
 
@@ -13,9 +13,9 @@ router = APIRouter()
 async def add_investor(investor: Investor):
     return await addInvestor(investor)
 
-@router.get("/users/investors/{investorId}",tags=["Investors"])
-async def get_investor_by_id(investorId: str):
-    return await getInvestorById(investorId)
+@router.get("/users/investors/{userId}",tags=["Investors"])
+async def get_investor_by_id(userId: str):
+    return await getInvestorByUserId(userId)
 
 @router.delete("/users/investors/{investorId}",tags=["Investors"])
 async def delete_investor(investorId: str):

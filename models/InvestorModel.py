@@ -60,6 +60,7 @@ class InvestorOut(Investor):
     userId: str 
     user: Optional[Dict[str, Any]] = None
     previous_investments: Optional[List[Dict[str, Any]]] = None
+    funds_available: Optional[float] = None
 
 
     @validator("id",pre=True, always=True)
@@ -79,13 +80,23 @@ class InvestorOut(Investor):
     @validator("previous_investments", pre=True, always=True)
     def convert_startup_ids_to_strings(cls, value):
         if value and isinstance(value, list):
+            result = []
             for item in value:
-                if "startup_id" in item and item["startup_id"] is not None:
-                    return convert_objectid_to_str(item["startup_id"])
-        
+                if isinstance(item, dict):
+                    processed_item = {}
+                    for k, v in item.items():
+                        if k == "startup_id" and v is not None:
+                            processed_item[k] = convert_objectid_to_str(v)
+                        else:
+                            processed_item[k] = v
+                    result.append(processed_item)
+                else:
+                    result.append(item)
+            return result
+        return value
 
 
 
 
 
-    
+

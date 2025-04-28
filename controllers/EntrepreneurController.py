@@ -91,7 +91,8 @@ async def getEntrepreneurById(entrepreneurId:str):
     if user:
         user["_id"] = str(user["_id"])
         entrepreneur["user"] = user
-    
+
+    entrepreneur = convert_objectid_to_str(entrepreneur)  # <-- Ensure all ObjectIds are strings
     return EntrepreneurOut(**entrepreneur)
 
 
@@ -123,7 +124,7 @@ async def getEnterpreneurByUserId(userId:str):
         raise HTTPException(status_code=404, detail="Entrepreneur not found")
     
     # Convert ObjectId to string for the response
-    entrepreneur["_id"] = str(entrepreneur["_id"])
+    entrepreneur = convert_objectid_to_str(entrepreneur)  # <-- Ensure all ObjectIds are strings
     
     return EntrepreneurOut(**entrepreneur)
 

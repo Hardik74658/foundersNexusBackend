@@ -1,5 +1,6 @@
 from config.database import investors_collection,users_collection
 from bson import ObjectId
+from bson.decimal128 import Decimal128  # Add import for Decimal128
 from models.InvestorModel import Investor,InvestorOut
 from fastapi import HTTPException, Response, status
 from fastapi.responses import JSONResponse
@@ -8,6 +9,8 @@ from fastapi.responses import JSONResponse
 def convert_objectid_to_str(data):
     """Recursively converts ObjectId instances in the data to strings."""
     if isinstance(data, ObjectId):
+        return str(data)
+    elif isinstance(data, Decimal128):  # Handle Decimal128 type
         return str(data)
     elif isinstance(data, dict):
         return {k: convert_objectid_to_str(v) for k, v in data.items()}
@@ -31,8 +34,8 @@ async def getAllInvestors():
     return [InvestorOut(**investor) for investor in investors]
 
 
-async def getInvestorById(investorId: str):
-    investor = await investors_collection.find_one({"_id": ObjectId(investorId)})
+async def getInvestorByUserId(userId: str):
+    investor = await investors_collection.find_one({"userId": ObjectId(userId)})
     if investor is None:        
         raise HTTPException(status_code=404, detail="Investor not found")
     if "userId" in investor:
